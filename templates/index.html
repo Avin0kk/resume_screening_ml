@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>AI Recruitment Assistant</title>
+
+<style>
+
+body{
+margin:0;
+font-family:'Segoe UI',sans-serif;
+background:#F7F7F7;
+color:#2E2E2E;
+}
+
+.container{
+width:85%;
+margin:40px auto;
+background:white;
+padding:30px;
+border-radius:15px;
+box-shadow:0 8px 20px rgba(0,0,0,0.08);
+}
+
+h1{
+text-align:center;
+color:#93C47D;
+}
+
+textarea{
+width:100%;
+padding:15px;
+margin-top:10px;
+border-radius:8px;
+border:1px solid #ccc;
+resize:vertical;
+}
+
+input[type="file"]{
+margin-top:10px;
+}
+
+button{
+background:#93C47D;
+color:white;
+padding:12px 25px;
+border:none;
+border-radius:8px;
+font-size:16px;
+cursor:pointer;
+margin-top:15px;
+}
+
+button:hover{
+background:#7FB069;
+}
+
+.results{
+margin-top:30px;
+padding:20px;
+border-radius:12px;
+background:#C9DABF;
+}
+
+.section{
+margin-top:15px;
+padding:15px;
+border-radius:10px;
+background:white;
+}
+
+.prediction{
+background:#93C47D;
+color:white;
+}
+
+.skills{
+background:#E6C5C9;
+}
+
+.match{
+background:#E5989B;
+color:white;
+}
+
+.bar-container{
+background:#ddd;
+border-radius:20px;
+overflow:hidden;
+margin-top:10px;
+}
+
+.bar{
+height:25px;
+background:#93C47D;
+text-align:center;
+color:white;
+line-height:25px;
+}
+
+ul{
+padding-left:20px;
+}
+
+.grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+}
+
+.photo{
+width:120px;
+border-radius:10px;
+margin-bottom:10px;
+}
+
+.links a{
+display:block;
+margin-bottom:4px;
+}
+
+.decision-buttons button{
+margin-right:10px;
+}
+
+@media(max-width:768px){
+.grid{
+grid-template-columns:1fr;
+}
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>AI Recruitment Assistant</h1>
+
+<form action="/predict" method="post" enctype="multipart/form-data">
+
+<h3>Upload Resume (PDF or DOCX)</h3>
+<input type="file" name="resume_file" multiple>
+
+<h3>Or Paste Resume Text</h3>
+<textarea name="resume" rows="8" placeholder="Paste resume here..."></textarea>
+
+<h3>Optional: Paste Job Description</h3>
+<textarea name="job_desc" rows="6" placeholder="Paste job description here..."></textarea>
+
+<button type="submit">Analyze Resume</button>
+
+</form>
+
+
+{% if prediction %}
+
+<div class="results">
+
+<!-- Candidate Details -->
+
+<div class="section">
+
+<h3>Candidate Profile</h3>
+
+{% if photo %}
+<img src="{{ photo }}" class="photo">
+{% endif %}
+
+{% if details.name %}
+<p><b>Name:</b> {{ details.name }}</p>
+{% endif %}
+
+{% if details.phone %}
+<p><b>Phone:</b> {{ details.phone }}</p>
+{% endif %}
+
+{% if details.experience %}
+<p><b>Experience:</b> {{ details.experience }}</p>
+{% endif %}
+
+{% if details.major_skill %}
+<p><b>Primary Skill:</b> {{ details.major_skill }}</p>
+{% endif %}
+
+<div class="links">
+
+{% if details.email %}
+<p><b>Email:</b> {{ details.email }}</p>
+{% endif %}
+
+{% if details.linkedin %}
+<a href="{{ details.linkedin }}" target="_blank">LinkedIn</a>
+{% endif %}
+
+{% if details.github %}
+<a href="{{ details.github }}" target="_blank">GitHub</a>
+{% endif %}
+
+{% if details.leetcode %}
+<a href="{{ details.leetcode }}" target="_blank">LeetCode</a>
+{% endif %}
+
+</div>
+
+</div>
+
+
+<!-- Prediction -->
+
+<div class="section prediction">
+
+<h3>Top Role: {{ prediction }}</h3>
+
+<div class="bar-container">
+<div class="bar" style="width: {{ confidence }}%;">
+Confidence: {{ confidence }}%
+</div>
+</div>
+
+</div>
+
+
+<!-- ATS Score -->
+
+<div class="section">
+
+<h3>ATS Score</h3>
+
+<div class="bar-container">
+<div class="bar" style="width: {{ ats_score }}%;">
+{{ ats_score }}/100
+</div>
+</div>
+
+</div>
+
+
+<div class="grid">
+
+<div class="section skills">
+
+<h3>Detected Skills</h3>
+
+<ul>
+{% for skill in skills %}
+<li>{{ skill }}</li>
+{% endfor %}
+</ul>
+
+</div>
+
+
+{% if match_score %}
+
+<div class="section match">
+
+<h3>Job Match Score</h3>
+
+<div class="bar-container">
+<div class="bar" style="width: {{ match_score }}%;">
+{{ match_score }}%
+</div>
+</div>
+
+</div>
+
+{% endif %}
+
+</div>
+
+
+<!-- Top Roles -->
+
+<div class="section">
+
+<h3>Top 3 Role Suggestions</h3>
+
+<ul>
+{% for role,score in top_roles %}
+<li>{{ role }} — {{ score }}%</li>
+{% endfor %}
+</ul>
+
+</div>
+
+
+<!-- Suggestions -->
+
+<div class="section">
+
+<h3>Resume Improvement Suggestions</h3>
+
+<ul>
+{% for suggestion in suggestions %}
+<li>{{ suggestion }}</li>
+{% endfor %}
+</ul>
+
+</div>
+
+
+<!-- Recruiter Decision -->
+
+<div class="section">
+
+<h3>Recruiter Decision</h3>
+
+<form action="/decision" method="POST">
+
+<input type="hidden" name="email" value="{{ details.email }}">
+<input type="hidden" name="name" value="{{ details.name }}">
+
+<button name="decision" value="accept">👍 Accept</button>
+<button name="decision" value="reject">👎 Reject</button>
+
+</form>
+
+{% if decision_message %}
+<h3>{{ decision_message }}</h3>
+{% endif %}
+
+</div>
+
+
+<!-- Ranking -->
+
+{% if rankings %}
+
+<div class="section">
+
+<h3>Candidate Ranking</h3>
+
+<ul>
+{% for name,score in rankings %}
+<li>{{ name }} — {{ score }}%</li>
+{% endfor %}
+</ul>
+
+</div>
+
+{% endif %}
+
+
+<!-- Download Report -->
+
+<div class="section">
+
+<h3>Generate Candidate Report</h3>
+
+<a href="/download_report">
+<button>Download PDF Report</button>
+</a>
+
+</div>
+
+</div>
+
+{% endif %}
+
+</div>
+
+</body>
+</html>
