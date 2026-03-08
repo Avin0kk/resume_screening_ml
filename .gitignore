@@ -4,3 +4,4 @@ __pycache__/
 .env
 model.pkl
 vectorizer.pkl
+candidate_photo.png

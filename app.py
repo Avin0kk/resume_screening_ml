@@ -1,3 +1,8 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from flask import Flask, render_template, request, send_file
 import pickle
 import re
@@ -15,9 +20,6 @@ app = Flask(__name__)
 model = pickle.load(open("model.pkl","rb"))
 vectorizer = pickle.load(open("vectorizer.pkl","rb"))
 
-# ---------------------------
-# SKILLS DATABASE
-# ---------------------------
 SKILLS_DB = [
 "python","java","c++","machine learning","deep learning",
 "data analysis","sql","mysql","mongodb",
@@ -26,24 +28,15 @@ SKILLS_DB = [
 "tensorflow","pandas","numpy","scikit-learn"
 ]
 
-# ---------------------------
-# CLEAN TEXT
-# ---------------------------
 def clean_text(text):
     text=text.lower()
     text=re.sub(r'[^a-zA-Z ]','',text)
     text=re.sub(r'\s+',' ',text)
     return text
 
-# ---------------------------
-# SKILLS
-# ---------------------------
 def extract_skills(text):
     return [skill.title() for skill in SKILLS_DB if skill in text]
 
-# ---------------------------
-# PDF TEXT
-# ---------------------------
 def extract_text_from_pdf(file):
     reader=PdfReader(file)
     text=""
@@ -53,16 +46,10 @@ def extract_text_from_pdf(file):
             text+=page_text
     return text
 
-# ---------------------------
-# DOCX TEXT
-# ---------------------------
 def extract_text_from_docx(file):
     doc=Document(file)
     return " ".join([para.text for para in doc.paragraphs])
 
-# ---------------------------
-# EXTRACT LINKS
-# ---------------------------
 def extract_links_from_pdf(file):
 
     links={
@@ -94,9 +81,6 @@ def extract_links_from_pdf(file):
 
     return links
 
-# ---------------------------
-# PHOTO EXTRACTION
-# ---------------------------
 def extract_photo_from_pdf(file):
 
     pdf=fitz.open(stream=file.read(),filetype="pdf")
@@ -118,9 +102,6 @@ def extract_photo_from_pdf(file):
 
     return None
 
-# ---------------------------
-# EXPERIENCE
-# ---------------------------
 def extract_experience(text):
 
     match=re.search(
@@ -134,9 +115,6 @@ def extract_experience(text):
 
     return None
 
-# ---------------------------
-# BASIC DETAILS
-# ---------------------------
 def extract_basic_details(text,skills,links):
 
     phone_match=re.search(r'\+?\d[\d\s\-]{8,15}',text)
@@ -159,9 +137,6 @@ def extract_basic_details(text,skills,links):
         "major_skill":major_skill
     }
 
-# ---------------------------
-# ATS SCORE
-# ---------------------------
 def calculate_ats_score(text):
 
     score=0
@@ -180,17 +155,18 @@ def calculate_ats_score(text):
 
     return min(score,100)
 
-# ---------------------------
-# EMAIL FUNCTION
-# ---------------------------
 def send_decision_email(email,name,decision):
 
     sender="goelavin543@gmail.com"
-    password="mtoz augj thrg qscl"
+    password=os.getenv("EMAIL_PASSWORD")
+
+    if not password:
+        print("EMAIL PASSWORD NOT FOUND IN ENV")
+        return
 
     if decision=="accept":
 
-        subject="Application Update"
+        subject="Application Status Update"
 
         body=f"""
 Dear {name},
@@ -199,26 +175,26 @@ Congratulations!
 
 After reviewing your resume, we are pleased to inform you that you have been shortlisted.
 
-Our team will contact you with the next steps.
+Our team will contact you soon regarding the next steps.
 
-Best regards  
+Best regards
 Recruitment Team
 """
 
     else:
 
-        subject="Application Update"
+        subject="Application Status Update"
 
         body=f"""
 Dear {name},
 
 Thank you for applying.
 
-After reviewing your resume, we regret to inform you that we will not proceed further with your application.
+After careful consideration, we regret to inform you that we will not proceed further with your application.
 
-We wish you success in your career.
+We wish you success in your future endeavors.
 
-Best regards  
+Best regards
 Recruitment Team
 """
 
@@ -227,14 +203,16 @@ Recruitment Team
     msg["From"]=sender
     msg["To"]=email
 
-    server=smtplib.SMTP_SSL("smtp.gmail.com",465)
-    server.login(sender,password)
-    server.send_message(msg)
-    server.quit()
+    try:
+        server=smtplib.SMTP_SSL("smtp.gmail.com",465)
+        server.login(sender,password)
+        server.send_message(msg)
+        server.quit()
+        print("Email sent successfully")
 
-# ---------------------------
-# REPORT GENERATION
-# ---------------------------
+    except Exception as e:
+        print("Email sending failed:",e)
+
 def generate_report(details,prediction,confidence,photo):
 
     filename="candidate_report.pdf"
@@ -263,16 +241,10 @@ def generate_report(details,prediction,confidence,photo):
 
     return filename
 
-# ---------------------------
-# HOME
-# ---------------------------
 @app.route('/')
 def home():
     return render_template("index.html")
 
-# ---------------------------
-# PREDICT
-# ---------------------------
 @app.route('/predict',methods=['POST'])
 def predict():
 
@@ -330,9 +302,6 @@ def predict():
     photo=photo
     )
 
-# ---------------------------
-# EMAIL DECISION
-# ---------------------------
 @app.route('/decision',methods=['POST'])
 def decision():
 
@@ -342,14 +311,13 @@ def decision():
 
     if email:
         send_decision_email(email,name,decision)
+        message="Decision recorded and email sent ✔"
 
-    message="Candidate Accepted and Email Sent ✅" if decision=="accept" else "Candidate Rejected and Email Sent ❌"
+    else:
+        message="Decision recorded but no email found in resume"
 
     return render_template("index.html",decision_message=message)
 
-# ---------------------------
-# DOWNLOAD REPORT
-# ---------------------------
 @app.route('/download_report')
 def download_report():
     return send_file("candidate_report.pdf",as_attachment=True)
