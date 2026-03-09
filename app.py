@@ -252,9 +252,9 @@ def predict():
     photo=None
     links={}
 
-    file=request.files['resume_file']
+    file = request.files.get('resume_file')
 
-    if file and file.filename.endswith(".pdf"):
+    if file and file.filename and file.filename.endswith(".pdf"):
 
         resume_text=extract_text_from_pdf(file)
 
