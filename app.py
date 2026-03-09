@@ -1,4 +1,5 @@
 import os
+from xmlrpc import server
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -210,11 +211,10 @@ Recruitment Team
     try:
         print("Attempting to send email to:", email)
 
-        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
         server.login(sender, password)
-
         server.sendmail(sender, email, msg.as_string())
-
         server.quit()
 
         print("EMAIL SENT SUCCESSFULLY")
