@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import threading
+
 from flask import Flask, render_template, request, send_file
 import pickle
 import re
@@ -302,21 +304,25 @@ def predict():
     photo=photo
     )
 
-@app.route('/decision',methods=['POST'])
+@app.route('/decision', methods=['POST'])
 def decision():
 
-    email=request.form.get("email")
-    name=request.form.get("name")
-    decision=request.form.get("decision")
+    email = request.form.get("email")
+    name = request.form.get("name")
+    decision = request.form.get("decision")
 
     if email:
-        send_decision_email(email,name,decision)
-        message="Decision recorded and email sent ✔"
+        threading.Thread(
+            target=send_decision_email,
+            args=(email, name, decision)
+        ).start()
 
+    if decision == "accept":
+        message = "Candidate Accepted ✅ Email is being sent."
     else:
-        message="Decision recorded but no email found in resume"
+        message = "Candidate Rejected ❌ Email is being sent."
 
-    return render_template("index.html",decision_message=message)
+    return render_template("index.html", decision_message=message)
 
 @app.route('/download_report')
 def download_report():
