@@ -308,6 +308,7 @@ def predict():
 def decision():
 
     email = request.form.get("email")
+    print("EMAIL RECEIVED:", email)
     name = request.form.get("name")
     decision = request.form.get("decision")
 
