@@ -157,20 +157,20 @@ def calculate_ats_score(text):
 
     return min(score,100)
 
-def send_decision_email(email,name,decision):
+def send_decision_email(email, name, decision):
 
-    sender="goelavin543@gmail.com"
-    password=os.getenv("EMAIL_PASSWORD")
+    sender = "goelavin543@gmail.com"
+    password = os.getenv("EMAIL_PASSWORD")
 
     if not password:
         print("EMAIL PASSWORD NOT FOUND IN ENV")
         return
 
-    if decision=="accept":
+    if decision == "accept":
 
-        subject="Application Status Update"
+        subject = "Application Status Update"
 
-        body=f"""
+        body = f"""
 Dear {name},
 
 Congratulations!
@@ -179,15 +179,15 @@ After reviewing your resume, we are pleased to inform you that you have been sho
 
 Our team will contact you soon regarding the next steps.
 
-Best regards
+Best regards  
 Recruitment Team
 """
 
     else:
 
-        subject="Application Status Update"
+        subject = "Application Status Update"
 
-        body=f"""
+        body = f"""
 Dear {name},
 
 Thank you for applying.
@@ -196,24 +196,31 @@ After careful consideration, we regret to inform you that we will not proceed fu
 
 We wish you success in your future endeavors.
 
-Best regards
+Best regards  
 Recruitment Team
 """
 
-    msg=MIMEText(body)
-    msg["Subject"]=subject
-    msg["From"]=sender
-    msg["To"]=email
+    msg = MIMEText(body)
+
+    msg["Subject"] = subject
+    msg["From"] = sender
+    msg["To"] = email
+    msg["Reply-To"] = sender
 
     try:
-        server=smtplib.SMTP_SSL("smtp.gmail.com",465)
-        server.login(sender,password)
-        server.send_message(msg)
+        print("Attempting to send email to:", email)
+
+        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+        server.login(sender, password)
+
+        server.sendmail(sender, email, msg.as_string())
+
         server.quit()
-        print("Email sent successfully")
+
+        print("EMAIL SENT SUCCESSFULLY")
 
     except Exception as e:
-        print("Email sending failed:",e)
+        print("EMAIL ERROR:", e)
 
 def generate_report(details,prediction,confidence,photo):
 
