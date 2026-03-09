@@ -18,9 +18,6 @@ import fitz
 import smtplib
 from email.mime.text import MIMEText
 
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
-
 app = Flask(__name__)
 
 model = pickle.load(open("model.pkl","rb"))
@@ -165,9 +162,12 @@ def calculate_ats_score(text):
 
 def send_decision_email(email, name, decision):
 
+    sender_email = "goelavin543@gmail.com"
+    app_password = os.getenv("EMAIL_PASSWORD")
+
     if decision == "accept":
 
-        body=f"""
+        body = f"""
 Dear {name},
 
 Congratulations!
@@ -176,33 +176,36 @@ After reviewing your resume, we are pleased to inform you that you have been sho
 
 Our team will contact you soon.
 
-Best regards  
+Best regards
 Recruitment Team
 """
 
     else:
 
-        body=f"""
+        body = f"""
 Dear {name},
 
 Thank you for applying.
 
 After careful consideration, we regret to inform you that we will not proceed further.
 
-Best regards  
+Best regards
 Recruitment Team
 """
 
-    message = Mail(
-        from_email="goelavin543@gmail.com",
-        to_emails=email,
-        subject="Application Status Update",
-        plain_text_content=body
-    )
+    msg = MIMEText(body)
+    msg["Subject"] = "Application Status Update"
+    msg["From"] = sender_email
+    msg["To"] = email
 
     try:
-        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
-        sg.send(message)
+
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(sender_email, app_password)
+        server.sendmail(sender_email, email, msg.as_string())
+        server.quit()
+
         print("EMAIL SENT SUCCESSFULLY")
 
     except Exception as e:
