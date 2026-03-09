@@ -18,6 +18,9 @@ import fitz
 import smtplib
 from email.mime.text import MIMEText
 
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+
 app = Flask(__name__)
 
 model = pickle.load(open("model.pkl","rb"))
@@ -158,27 +161,20 @@ def calculate_ats_score(text):
 
     return min(score,100)
 
+
+
 def send_decision_email(email, name, decision):
-
-    sender = "goelavin543@gmail.com"
-    password = os.getenv("EMAIL_PASSWORD")
-
-    if not password:
-        print("EMAIL PASSWORD NOT FOUND IN ENV")
-        return
 
     if decision == "accept":
 
-        subject = "Application Status Update"
-
-        body = f"""
+        body=f"""
 Dear {name},
 
 Congratulations!
 
 After reviewing your resume, we are pleased to inform you that you have been shortlisted.
 
-Our team will contact you soon regarding the next steps.
+Our team will contact you soon.
 
 Best regards  
 Recruitment Team
@@ -186,37 +182,27 @@ Recruitment Team
 
     else:
 
-        subject = "Application Status Update"
-
-        body = f"""
+        body=f"""
 Dear {name},
 
 Thank you for applying.
 
-After careful consideration, we regret to inform you that we will not proceed further with your application.
-
-We wish you success in your future endeavors.
+After careful consideration, we regret to inform you that we will not proceed further.
 
 Best regards  
 Recruitment Team
 """
 
-    msg = MIMEText(body)
-
-    msg["Subject"] = subject
-    msg["From"] = sender
-    msg["To"] = email
-    msg["Reply-To"] = sender
+    message = Mail(
+        from_email="goelavin543@gmail.com",
+        to_emails=email,
+        subject="Application Status Update",
+        plain_text_content=body
+    )
 
     try:
-        print("Attempting to send email to:", email)
-
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
-        server.login(sender, password)
-        server.sendmail(sender, email, msg.as_string())
-        server.quit()
-
+        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+        sg.send(message)
         print("EMAIL SENT SUCCESSFULLY")
 
     except Exception as e:
